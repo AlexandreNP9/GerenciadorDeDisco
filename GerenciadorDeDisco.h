@@ -15,5 +15,7 @@ bool disco_grava(Disco* d, char* arquivo); // nome arquivo deve conter o caminho
 bool disco_remove(Disco* d, char* nome); // somente o nome do arquivo sem o caminho
 bool disco_recupera(Disco* d, char* nome, char* arquivoDestino); // nome arquivo deve conter o caminho absoluto ou relativo do arquivo
 void disco_lista(Disco* d);
+void imprimeSetoresLivres(Disco *d);
+unsigned int getTamanhoArquivo(FILE *arq);
 
 #endif

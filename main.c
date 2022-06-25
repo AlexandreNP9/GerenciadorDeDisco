@@ -8,5 +8,8 @@ int main()
     else
         printf("\nNULL\n");
 
+    imprimeSetoresLivres(disco);
+    printf("\n");
+
     return 0;
 }

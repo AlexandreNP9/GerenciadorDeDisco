@@ -22,7 +22,7 @@ struct disco
 {
     char nome[40];
     void *disco;
-    NoSetor *livres;
+    NoSetor *setoresLivres;
     NoArquivo *arquivos;
     long int tamDisco;
     long int espacoLivre;
@@ -83,8 +83,8 @@ bool duplicarArquivo(char *nomeArquivoEntrada, char *nomeArquivoSaida)
 void imprimeSetoresLivres(Disco *d)
 {
     printf("LIVRES: ");
-    NoSetor *aux = d->livres->prox;
-    while (aux != d->livres)
+    NoSetor *aux = d->setoresLivres->prox;
+    while (aux != d->setoresLivres)
     {
         printf("[%ld,%ld] ", aux->inicio, aux->fim);
         aux = aux->prox;
@@ -92,34 +92,36 @@ void imprimeSetoresLivres(Disco *d)
     printf("\n");
 }
 
-bool criar_arquivo(Disco *disco, char nome[])
+bool inserir_setor(Disco *disco, unsigned long inicio, unsigned long fim)
 {
-    NoArquivo* new = (NoArquivo *)malloc(sizeof(NoArquivo));
+    NoSetor *new = (NoSetor *)malloc(sizeof(NoSetor));
 
     if (new == NULL)
         return false;
-
-    strcpy(new->nome, nome);
-    new->prox = new;
-    new->ant = new;
-    new->setores = NULL;
-    new->tam = 0;
-
-    disco->arquivos = new;
-    return true;
-}
-
-bool criar_livres(Disco *disco, long tam)
-{
-    disco->livres = (NoSetor *)malloc(sizeof(NoSetor));
-
-    if (disco->livres == NULL)
+    if (fim <= inicio)
         return false;
 
-    disco->livres->prox = disco->livres;
-    disco->livres->ant = disco->livres;
-    disco->livres->inicio = 0;
-    disco->livres->fim = tam - 1;
+    // checa conflito de espaços
+    NoSetor *aux = disco->setoresLivres->prox;
+    while (aux != disco->setoresLivres)
+    {
+        if (inicio == aux->inicio || fim == aux->fim) // sobreposição de valores
+            return false;
+        if (fim > aux->inicio && inicio < aux->fim) // intersecção no setor a frente
+            return false;
+        if (aux->fim > inicio && aux->inicio < fim) // intersecção no setor a tras
+            return false;
+    }
+
+    // implementação do espaço livre
+    new->inicio = inicio;
+    new->fim = fim;
+
+    // ajusta as posições dos nós setores
+    new->prox = disco->setoresLivres;
+    disco->setoresLivres->ant->prox = new;
+    new->ant = disco->setoresLivres->ant;
+    disco->setoresLivres->ant = new;
     return true;
 }
 
@@ -134,23 +136,45 @@ Disco *disco_cria(char *nome, long int tamanho)
     }
     strcpy(disco->nome, nome);
     disco->disco = malloc(tamanho);
-    if (!criar_livres(disco, tamanho))
+    disco->tamDisco = tamanho;
+    disco->espacoLivre = tamanho;
+    disco->qtdArquivos = 0;
+
+    // Cria setores livres
+    NoSetor *newSetor = (NoSetor *)malloc(sizeof(NoSetor));
+    if (newSetor == NULL)
     {
         perror("theres is not enough memory to create >>sectors<<");
         return NULL;
     }
-    if (!criar_arquivo(disco, "sentinela"))
+    newSetor->prox = newSetor;
+    newSetor->ant = newSetor;
+    disco->setoresLivres = newSetor;
+    if (!inserir_setor(disco, 0, tamanho - 1))
+    {
+        perror("Unable to create a sector of empty space >>empty sector<<");
+        return false;
+    }
+
+    // Cria arquivo
+    NoArquivo *newArquivo = (NoArquivo *)malloc(sizeof(NoArquivo));
+    if (newArquivo == NULL)
     {
         perror("theres is not enough memory to create >>arquivo<<");
         return NULL;
     }
-    disco->tamDisco = tamanho;
-    disco->espacoLivre = tamanho;
-    disco->qtdArquivos = 0;
+    strcpy(newArquivo->nome, nome);
+    newArquivo->prox = newArquivo;
+    newArquivo->ant = newArquivo;
+    newArquivo->setores = NULL;
+    newArquivo->tam = 0;
+    disco->arquivos = newArquivo;
+
     return disco;
 }
 
-bool disco_grava(Disco *d, char *arquivo);                       // nome arquivo deve conter o caminho absoluto ou relativo do arquivo
+// nome arquivo deve conter o caminho absoluto ou relativo do arquivo
+bool disco_grava(Disco *d, char *arquivo);
 bool disco_remove(Disco *d, char *nome);                         // somente o nome do arquivo sem o caminho
 bool disco_recupera(Disco *d, char *nome, char *arquivoDestino); // nome arquivo deve conter o caminho absoluto ou relativo do arquivo
 

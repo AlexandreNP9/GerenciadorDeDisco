@@ -111,6 +111,7 @@ bool inserir_setor(Disco *disco, unsigned long inicio, unsigned long fim)
             return false;
         if (aux->fim > inicio && aux->inicio < fim) // intersecção no setor a tras
             return false;
+        aux = aux->prox;
     }
 
     // implementação do espaço livre

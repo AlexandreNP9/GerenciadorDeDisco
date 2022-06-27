@@ -126,6 +126,34 @@ bool inserir_setor(NoSetor *listaSetores, unsigned long inicio, unsigned long fi
     return true;
 }
 
+bool desmanchar_setor(NoSetor *listaSetores, unsigned long inicio, unsigned long fim)
+{
+    // TODO verificar validade de disco (d)
+    if (listaSetores->prox == listaSetores)
+        return false;
+
+    NoSetor *aux = listaSetores->prox;
+    while (aux != listaSetores)
+    {
+        if (aux->inicio == inicio)
+        {
+            if (fim < aux->fim)
+            {
+                aux->inicio = fim + 1;
+            }
+            else
+            {
+                aux->ant->prox = aux->prox;
+                aux->prox->ant = aux->ant;
+                free(aux);
+            }
+            break;
+        }
+        aux = aux->prox;
+    }
+    return true;
+}
+
 bool criar_listaSetores(NoSetor **enderecoListaSetores)
 {
     NoSetor *new = (NoSetor *)malloc(sizeof(NoSetor));
@@ -189,33 +217,46 @@ Disco *disco_cria(char *nome, long int tamanho)
 bool disco_grava(Disco *d, char *arquivo)
 {
     // abre arquivo
-    FILE *arq = fopen(arquivo, "r");
+    FILE *arq = fopen(arquivo, "rb");
+    if (arq == NULL)
+    {
+        perror("The file is null");
+        return false;
+    }
+
     unsigned long tamArquivo = getTamanhoArquivo(arq);
 
-    // cria nó arquivo e implementa os dados
+    // cria arquivo e implementa os dados
     NoArquivo *newArquivo = (NoArquivo *)malloc(sizeof(NoArquivo));
     strcpy(newArquivo->nome, arquivo);
     newArquivo->tam = tamArquivo;
 
-    // ajusta os nós arquivos na lista de arquivos
+    // encadeia o arquivo na lista de arquivos
     newArquivo->prox = d->arquivos;
     d->arquivos->ant->prox = newArquivo;
     newArquivo->ant = d->arquivos->ant;
     d->arquivos->ant = newArquivo;
 
-    // Cria lista de setores
+    // Cria lista de setores do arquivo
     if (!criar_listaSetores(&(newArquivo->setores)))
     {
         perror("Unable to create a list of sectors >>List sectors<<");
         return false;
     }
 
-    // verifica espaços suficientes livres e Cria setor do arquivo
+    // verifica espaços suficientes livres
+    if (d->espacoLivre < tamArquivo)
+    {
+        perror("There is not enough memory on disk!!");
+        return false;
+    }
+
+    // aloca setor do arquivo
     long espacoArquivo = tamArquivo;
-    NoSetor* aux = d->setoresLivres->prox;
+    NoSetor *aux = d->setoresLivres->prox;
     while (aux != d->setoresLivres)
     {
-        long espacoLivre = aux->fim - (aux->inicio - 1); // -1 porque estamos trabalhando com indexs
+        long espacoLivre = aux->fim - (aux->inicio - 1);
         espacoArquivo -= espacoLivre;
 
         if (espacoArquivo <= 0)
@@ -227,7 +268,11 @@ bool disco_grava(Disco *d, char *arquivo)
                 perror("Unable to create a setor for file");
                 return false;
             }
-            // TODO diminui espaco livre
+            if (!desmanchar_setor(d->setoresLivres, inicio, fim))
+            {
+                perror("Unexpected error!!");
+                return false;
+            }
             break;
         }
         else
@@ -239,17 +284,15 @@ bool disco_grava(Disco *d, char *arquivo)
                 perror("Unable to create a setor for file");
                 return false;
             }
-            // TODO diminui espaco livre
+            if (!desmanchar_setor(d->setoresLivres, inicio, fim))
+            {
+                perror("Unexpected error!!");
+                return false;
+            }
         }
         aux = aux->prox;
     }
-
-    if (espacoArquivo > 0)
-    {
-        perror("There is not enough memory on disk!!");
-        // TODO desalocar o arquivo recem criado
-        return false;
-    }
+    d->espacoLivre -= tamArquivo;
 
     // TODO copia o conteudo do arquivo para a memoria
     // TODO grava no disco

@@ -92,7 +92,7 @@ void imprimeSetoresLivres(Disco *d)
     printf("\n");
 }
 
-bool inserir_setor(NoSetor *setorSentinela, unsigned long inicio, unsigned long fim)
+bool inserir_setor(NoSetor *listaSetores, unsigned long inicio, unsigned long fim)
 {
     NoSetor *new = (NoSetor *)malloc(sizeof(NoSetor));
 
@@ -102,8 +102,8 @@ bool inserir_setor(NoSetor *setorSentinela, unsigned long inicio, unsigned long 
         return false;
 
     // checa conflito de espaços
-    NoSetor *aux = setorSentinela->prox;
-    while (aux != setorSentinela)
+    NoSetor *aux = listaSetores->prox;
+    while (aux != listaSetores)
     {
         if (inicio == aux->inicio || fim == aux->fim) // sobreposição de valores
             return false;
@@ -119,14 +119,14 @@ bool inserir_setor(NoSetor *setorSentinela, unsigned long inicio, unsigned long 
     new->fim = fim;
 
     // ajusta as posições dos nós setores
-    new->prox = setorSentinela;
-    setorSentinela->ant->prox = new;
-    new->ant = setorSentinela->ant;
-    setorSentinela->ant = new;
+    new->prox = listaSetores;
+    listaSetores->ant->prox = new;
+    new->ant = listaSetores->ant;
+    listaSetores->ant = new;
     return true;
 }
 
-bool criar_listaSetores(NoSetor **setorSentinela)
+bool criar_listaSetores(NoSetor **enderecoListaSetores)
 {
     NoSetor *new = (NoSetor *)malloc(sizeof(NoSetor));
 
@@ -135,7 +135,7 @@ bool criar_listaSetores(NoSetor **setorSentinela)
 
     new->prox = new;
     new->ant = new;
-    *setorSentinela = new;
+    *enderecoListaSetores = new;
     return true;
 }
 
@@ -175,7 +175,7 @@ Disco *disco_cria(char *nome, long int tamanho)
         perror("theres is not enough memory to create >>arquivo<<");
         return NULL;
     }
-    strcpy(newArquivo->nome, nome);
+    strcpy(newArquivo->nome, "Sentinela");
     newArquivo->prox = newArquivo;
     newArquivo->ant = newArquivo;
     newArquivo->setores = NULL;
@@ -204,15 +204,53 @@ bool disco_grava(Disco *d, char *arquivo)
     d->arquivos->ant = newArquivo;
 
     // Cria lista de setores
-    if (!criar_listaSetores(newArquivo->setores))
+    if (!criar_listaSetores(&(newArquivo->setores)))
     {
         perror("Unable to create a list of sectors >>List sectors<<");
         return false;
     }
 
-    // Aqui lá se foi o boi com a corda !!!!
-    // TODO verificar espaços suficientes livres
-    // TODO Cria setor do arquivo
+    // verifica espaços suficientes livres e Cria setor do arquivo
+    long espacoArquivo = tamArquivo;
+    NoSetor* aux = d->setoresLivres->prox;
+    while (aux != d->setoresLivres)
+    {
+        long espacoLivre = aux->fim - (aux->inicio - 1); // -1 porque estamos trabalhando com indexs
+        espacoArquivo -= espacoLivre;
+
+        if (espacoArquivo <= 0)
+        {
+            long inicio = aux->inicio;
+            long fim = (aux->inicio - 1) + espacoArquivo + espacoLivre;
+            if (!inserir_setor(newArquivo->setores, inicio, fim))
+            {
+                perror("Unable to create a setor for file");
+                return false;
+            }
+            // TODO diminui espaco livre
+            break;
+        }
+        else
+        {
+            long inicio = aux->inicio;
+            long fim = aux->fim;
+            if (!inserir_setor(newArquivo->setores, inicio, fim))
+            {
+                perror("Unable to create a setor for file");
+                return false;
+            }
+            // TODO diminui espaco livre
+        }
+        aux = aux->prox;
+    }
+
+    if (espacoArquivo > 0)
+    {
+        perror("There is not enough memory on disk!!");
+        // TODO desalocar o arquivo recem criado
+        return false;
+    }
+
     // TODO copia o conteudo do arquivo para a memoria
     // TODO grava no disco
     fclose(arq);

@@ -150,7 +150,6 @@ Disco *disco_cria(char *nome, long int tamanho)
     disco->espacoLivre = tamanho;
     disco->qtdArquivos = 0;
 
-    // Cria lista de setores livres
     if (!criar_listaSetores(&(disco->setoresLivres)))
     {
         perror("Unable to create a list of sectors of empty space >>List Sectors<<");
@@ -208,7 +207,6 @@ bool disco_grava(Disco *d, char *arquivo)
     newArquivo->ant = d->arquivos->ant;
     d->arquivos->ant = newArquivo;
 
-    // Cria lista de setores do arquivo
     if (!criar_listaSetores(&(newArquivo->setores)))
     {
         perror("Unable to create a list of sectors >>List sectors<<");
@@ -263,6 +261,16 @@ bool disco_grava(Disco *d, char *arquivo)
     d->espacoLivre -= tamArquivo;
 
     // TODO copia o conteudo do arquivo para a memoria
+    NoSetor *setor = newArquivo->setores->prox;
+    for (int i = 0; i < tamArquivo; i++)
+    {
+        int index = i + setor->inicio;
+        if (index > setor->fim)
+            setor = setor->prox;
+
+        d->disco[index] = arq[i]; // PROBLEMA !!!!
+    }
+
     // TODO grava no disco
     fclose(arq);
 }

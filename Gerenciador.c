@@ -221,6 +221,7 @@ bool disco_grava(Disco *d, char *arquivo)
     }
 
     // aloca setor do arquivo
+    NoSetor *new = NULL;
     unsigned long espacoArquivo = tamArquivo;
     while (espacoArquivo > 0)
     {
@@ -228,19 +229,12 @@ bool disco_grava(Disco *d, char *arquivo)
         unsigned long espacoLivre = livre->fim - (livre->inicio - 1);
         if (espacoArquivo < espacoLivre)
         {
-            NoSetor *new = (NoSetor *)malloc(sizeof(NoSetor));
+            new = (NoSetor *)malloc(sizeof(NoSetor));
             if (new == NULL)
                 return false;
             new->inicio = livre->inicio;
             new->fim = (livre->inicio - 1) + espacoArquivo;
             livre->inicio = new->fim + 1;
-
-            // aloca setor do arquivo no espaco solicitado
-            if (!inserir_setor(newArquivo->setores, new))
-            {
-                perror("Could not possible to insert file sector (Unexpected error)");
-                return false;
-            }
             espacoArquivo = 0;
         }
         else
@@ -248,35 +242,41 @@ bool disco_grava(Disco *d, char *arquivo)
             // desencadeia o setor livre da lista
             livre->ant->prox = livre->prox;
             livre->prox->ant = livre->ant;
-
-            // aloca setor de parte do arquivo no espaco solicitado
-            if (!inserir_setor(newArquivo->setores, livre))
-            {
-                perror("Could not possible to insert file sector (Unexpected error)");
-                return false;
-            }
+            new = livre;
             espacoArquivo -= espacoLivre;
         }
+
+        // aloca setor do arquivo no espaco solicitado
+        if (!inserir_setor(newArquivo->setores, new))
+        {
+            perror("Could not possible to insert file sector (Unexpected error)");
+            return false;
+        }
+
+        // grava no disco
+        unsigned long tamSetor = new->fim - (new->inicio - 1);
+        fread(d->disco + new->inicio, tamSetor, 1, arq);
     }
     d->espacoLivre -= tamArquivo;
-
-    // TODO copia o conteudo do arquivo para a memoria
-    NoSetor *setor = newArquivo->setores->prox;
-    for (int i = 0; i < tamArquivo; i++)
-    {
-        int index = i + setor->inicio;
-        if (index > setor->fim)
-            setor = setor->prox;
-
-        d->disco[index] = arq[i]; // PROBLEMA !!!!
-    }
-
-    // TODO grava no disco
     fclose(arq);
 }
 
 // somente o nome do arquivo sem o caminho
-bool disco_remove(Disco *d, char *nome);
+bool disco_remove(Disco *d, char *nome)
+{
+    NoArquivo* selec = d->arquivos->prox;
+    while(selec != d->arquivos)
+    {
+        // identificar o arquivo pelo nome (strcmp)
+        
+        NoSetor* setor = selec->setores->prox;
+        while(setor != selec->setores)
+        {
+            // remover do disco
+            // remover setor e criar setor livre
+        }
+    }
+}
 
 // nome arquivo deve conter o caminho absoluto ou relativo do arquivo
 bool disco_recupera(Disco *d, char *nome, char *arquivoDestino);

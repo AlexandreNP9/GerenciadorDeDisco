@@ -92,6 +92,17 @@ void imprimeSetoresLivres(Disco *d)
     printf("\n");
 }
 
+bool discoValido(Disco *d)
+{
+    if (d == NULL)
+        return false;
+    if (d->disco == NULL)
+        return false;
+    if (d->setoresLivres == NULL)
+        return false;
+    return true;
+}
+
 bool inserir_setor(NoSetor *listaSetores, NoSetor *setor)
 {
     if (listaSetores == NULL)
@@ -186,6 +197,9 @@ Disco *disco_cria(char *nome, long int tamanho)
 // nome arquivo deve conter o caminho absoluto ou relativo do arquivo
 bool disco_grava(Disco *d, char *arquivo)
 {
+    if (!discoValido(d))
+        return false;
+
     // abre arquivo
     FILE *arq = fopen(arquivo, "rb");
     if (arq == NULL)
@@ -266,7 +280,9 @@ bool disco_grava(Disco *d, char *arquivo)
 // somente o nome do arquivo sem o caminho
 bool disco_remove(Disco *d, char *nome)
 {
-    // TODO disco valido ???
+    if (!discoValido(d))
+        return false;
+
     if (d->qtdArquivos <= 0)
         return false;
 
@@ -353,7 +369,10 @@ bool disco_remove(Disco *d, char *nome)
 }
 
 // nome arquivo deve conter o caminho absoluto ou relativo do arquivo
-bool disco_recupera(Disco *d, char *nome, char *arquivoDestino);
+bool disco_recupera(Disco *d, char *nome, char *arquivoDestino)
+{
+    //TODO
+}
 
 void disco_lista(Disco *d)
 {

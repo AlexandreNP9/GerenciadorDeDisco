@@ -82,7 +82,7 @@ bool duplicarArquivo(char *nomeArquivoEntrada, char *nomeArquivoSaida)
 
 void imprimeSetoresLivres(Disco *d)
 {
-    printf("LIVRES: ");
+    printf("LIVRES: %ld ", d->espacoLivre);
     NoSetor *aux = d->setoresLivres->prox;
     while (aux != d->setoresLivres)
     {
@@ -258,24 +258,98 @@ bool disco_grava(Disco *d, char *arquivo)
         fread(d->disco + new->inicio, tamSetor, 1, arq);
     }
     d->espacoLivre -= tamArquivo;
+    d->qtdArquivos++;
     fclose(arq);
+    return true;
 }
 
 // somente o nome do arquivo sem o caminho
 bool disco_remove(Disco *d, char *nome)
 {
-    NoArquivo* selec = d->arquivos->prox;
-    while(selec != d->arquivos)
+    // TODO disco valido ???
+    if (d->qtdArquivos <= 0)
+        return false;
+
+    char path[50] = "arquivos/";
+    strcat(path, nome);
+
+    // seleciona o arquivo pelo nome
+    NoArquivo *arq = d->arquivos->prox;
+    while (arq != d->arquivos)
     {
-        // identificar o arquivo pelo nome (strcmp)
-        
-        NoSetor* setor = selec->setores->prox;
-        while(setor != selec->setores)
+        if (strcmp(path, arq->nome) == 0)
+            break;
+
+        arq = arq->prox;
+    }
+
+    // verifica a existencia do arquivo
+    if (arq == d->arquivos)
+    {
+        perror("file >>name<< not found");
+        return false;
+    }
+
+    // retira os setores do arquivo e ajusta os setores livres
+    NoSetor *setorArq = NULL;
+    NoSetor *aux = arq->setores->prox;
+    while (aux != arq->setores)
+    {
+        setorArq = aux;
+        aux = aux->prox;
+
+        // não é necessário remover do disco. Fica como lixo de memória.
+        // desencadeia setorArq da lista de setores
+        setorArq->ant->prox = setorArq->prox;
+        setorArq->prox->ant = setorArq->ant;
+
+        // define espaço livre
+        NoSetor *aux = d->setoresLivres->prox;
+        while (aux != d->setoresLivres)
         {
-            // remover do disco
-            // remover setor e criar setor livre
+            // verifica se setorArq faz fronteira a frente ou atraz de setor livre
+            if (setorArq->inicio - 1 == aux->fim)
+            {
+                aux->fim = setorArq->fim;
+                free(setorArq);
+                break;
+            }
+            else if (setorArq->fim + 1 == aux->inicio)
+            {
+                aux->inicio = setorArq->inicio;
+                free(setorArq);
+                break;
+            }
+
+            // verifica se setor arquivo esta atraz do setor livre
+            if (setorArq->fim < aux->inicio)
+            {
+                setorArq->ant = aux->ant;
+                aux->ant->prox = setorArq;
+                setorArq->prox = aux;
+                aux->ant = setorArq;
+                break;
+            }
+            aux = aux->prox;
+        }
+        if (aux == d->setoresLivres)
+        {
+            perror("There was an error handling SetorLivres");
+            return false;
         }
     }
+
+    // ajusta os parametros do disco
+    d->qtdArquivos--;
+    d->espacoLivre += arq->tam;
+
+    // desencadeia o arquivo na lista de arquivos e o destroi
+    arq->ant->prox = arq->prox;
+    arq->prox->ant = arq->ant;
+    free(arq->nome);
+    free(arq);
+
+    return true;
 }
 
 // nome arquivo deve conter o caminho absoluto ou relativo do arquivo

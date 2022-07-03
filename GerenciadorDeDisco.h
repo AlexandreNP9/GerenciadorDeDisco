@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define DIRECTORY "./arquivos"
+#define DIRECTORY "arquivos/"
 
 typedef struct disco Disco;
 

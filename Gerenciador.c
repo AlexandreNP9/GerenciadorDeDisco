@@ -200,8 +200,11 @@ bool disco_grava(Disco *d, char *arquivo)
     if (!discoValido(d))
         return false;
 
+    char path[50] = DIRECTORY;
+    strcat(path, arquivo);
+
     // abre arquivo
-    FILE *arq = fopen(arquivo, "rb");
+    FILE *arq = fopen(path, "rb");
     if (arq == NULL)
     {
         perror("The file is null");
@@ -286,14 +289,14 @@ bool disco_remove(Disco *d, char *nome)
     if (d->qtdArquivos <= 0)
         return false;
 
-    char path[50] = "arquivos/";
+    char path[50] = DIRECTORY;
     strcat(path, nome);
 
     // seleciona o arquivo pelo nome
     NoArquivo *arq = d->arquivos->prox;
     while (arq != d->arquivos)
     {
-        if (strcmp(path, arq->nome) == 0)
+        if (strcmp(nome, arq->nome) == 0)
             break;
 
         arq = arq->prox;
@@ -303,7 +306,7 @@ bool disco_remove(Disco *d, char *nome)
     if (arq == d->arquivos)
     {
         char message[50];
-        sprintf(message, "file %s not found", arq->nome);
+        sprintf(message, "file %s not found", nome);
         perror(message);
         return false;
     }
@@ -376,14 +379,14 @@ bool disco_recupera(Disco *d, char *nome, char *arquivoDestino)
     if (!discoValido(d))
         return false;
     
-    char path[50] = "arquivos/";
+    char path[50] = DIRECTORY;
     strcat(path, nome);
 
     // seleciona o arquivo pelo nome
     NoArquivo* arq = d->arquivos->prox;
     while (arq != d->arquivos)
     {
-        if (strcmp(path, arq->nome) == 0)
+        if (strcmp(nome, arq->nome) == 0)
             break;
         arq = arq->prox;
     }

@@ -302,7 +302,9 @@ bool disco_remove(Disco *d, char *nome)
     // verifica a existencia do arquivo
     if (arq == d->arquivos)
     {
-        perror("file >>name<< not found");
+        char message[50];
+        sprintf(message, "file %s not found", arq->nome);
+        perror(message);
         return false;
     }
 
@@ -371,7 +373,53 @@ bool disco_remove(Disco *d, char *nome)
 // nome arquivo deve conter o caminho absoluto ou relativo do arquivo
 bool disco_recupera(Disco *d, char *nome, char *arquivoDestino)
 {
-    //TODO
+    if (!discoValido(d))
+        return false;
+    
+    char path[50] = "arquivos/";
+    strcat(path, nome);
+
+    // seleciona o arquivo pelo nome
+    NoArquivo* arq = d->arquivos->prox;
+    while (arq != d->arquivos)
+    {
+        if (strcmp(path, arq->nome) == 0)
+            break;
+        arq = arq->prox;
+    }
+
+    // verifica a existencia do arquivo
+    if (arq == d->arquivos)
+    {
+        char message[50];
+        sprintf(message, "file %s not found", nome);
+        perror(message);
+        return false;
+    }
+
+    // abre arquivoDestino para gravação
+    FILE *dest = fopen(arquivoDestino, "wb");
+    if (dest == NULL)
+    {
+        perror("file opening failed");
+        return false;
+    }
+
+    // passa do disco para o arquivo
+    NoSetor* aux = arq->setores->prox;
+    while (aux != arq->setores)
+    {
+        unsigned long setorTam = aux->fim - (aux->inicio - 1);
+        void* buffer = malloc(setorTam);
+        memcpy(buffer, d->disco + aux->inicio, setorTam);
+        fwrite(buffer, setorTam, 1, dest);
+        free(buffer);
+
+        aux = aux->prox;
+    }
+
+    fclose(dest);
+    return true;
 }
 
 void disco_lista(Disco *d)
